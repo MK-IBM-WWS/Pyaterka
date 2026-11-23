@@ -6,8 +6,6 @@ import base64
 import hashlib
 import io
 import json
-import posixpath
-import re
 import sys
 import tarfile
 from pathlib import Path
@@ -22,25 +20,7 @@ PACKAGES = {
         "version": "2.5.0",
         "integrity": "4E8wiTstl2KLilYmrBgBy8G328Y6A92ysv6SLXkz/k54n4xguL5RS3qdmKNkPFbiL5xW22yw6dwf4Vf/j34eOA==",
     },
-    "three": {
-        "version": "0.180.0",
-        "integrity": "o+qycAMZrh+TsE01GqWUxUIKR1AL0S8pq7zDkYOQw8GqfX8b8VoCKYUoHbhiX5j+7hr8XsuHDVU6+gkQJQKg9w==",
-    },
 }
-THREE_ROOTS = [
-    "package/build/three.module.js",
-    "package/examples/jsm/controls/OrbitControls.js",
-    "package/examples/jsm/loaders/GLTFLoader.js",
-    "package/examples/jsm/loaders/DRACOLoader.js",
-    "package/examples/jsm/libs/meshopt_decoder.module.js",
-    "package/examples/jsm/loaders/FBXLoader.js",
-    "package/examples/jsm/environments/RoomEnvironment.js",
-    "package/examples/jsm/libs/stats.module.js",
-]
-IMPORTS = re.compile(
-    r"^\s*(?:import|export)\s+(?:[^;'\"`]*?\bfrom\s*)?['\"]([^'\"\r\n]+)['\"]",
-    re.M,
-)
 
 
 def download_package(name):
@@ -67,46 +47,10 @@ def download_package(name):
 
 def select_assets():
     livekit = download_package("livekit-client")
-    assets = {
+    return {
         "livekit-client-2.5.0.esm.mjs": livekit["package/dist/livekit-client.esm.mjs"],
         "livekit-client.LICENSE": livekit["package/LICENSE"],
     }
-    three = download_package("three")
-    pending = list(THREE_ROOTS)
-    visited = set()
-    while pending:
-        source = pending.pop()
-        if source in visited:
-            continue
-        visited.add(source)
-        data = three[source]
-        assets["three/" + source.removeprefix("package/")] = data
-        # Documentation contains phrases such as "from 'https://...'"; only
-        # inspect code when following the module dependency graph.
-        code = re.sub(r"/\*.*?\*/", "", data.decode("utf-8"), flags=re.S)
-        code = re.sub(r"^\s*//.*$", "", code, flags=re.M)
-        for specifier in IMPORTS.findall(code):
-            if specifier.startswith("."):
-                dependency = posixpath.normpath(
-                    posixpath.join(posixpath.dirname(source), specifier)
-                )
-                if not dependency.startswith("package/"):
-                    raise ValueError(f"Invalid dependency: {specifier}")
-                pending.append(dependency)
-            elif specifier == "three":
-                pending.append("package/build/three.module.js")
-            elif specifier.startswith("three/addons/"):
-                pending.append(
-                    "package/examples/jsm/" + specifier.removeprefix("three/addons/")
-                )
-            else:
-                raise ValueError(f"Unresolved dependency: {specifier}")
-    assets["three/LICENSE"] = three["package/LICENSE"]
-    # A compressed GLB should also load without Google's public decoder CDN.
-    for filename in ("draco_decoder.js", "draco_wasm_wrapper.js", "draco_decoder.wasm"):
-        source = "package/examples/jsm/libs/draco/" + filename
-        assets["three/examples/jsm/libs/draco/" + filename] = three[source]
-    return assets
 
 
 def missing_assets():
@@ -131,7 +75,7 @@ def main():
     args = parser.parse_args()
     missing = missing_assets()
     if not missing:
-        print("Local browser assets are ready (LiveKit 2.5.0, Three.js 0.180.0).")
+        print("Local browser assets are ready (LiveKit 2.5.0).")
         return 0
     if args.check:
         print("Missing or damaged browser assets: " + ", ".join(missing), file=sys.stderr)

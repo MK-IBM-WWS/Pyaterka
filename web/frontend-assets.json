@@ -1,27 +1,9 @@
 {
   "versions": {
-    "livekit-client": "2.5.0",
-    "three": "0.180.0"
+    "livekit-client": "2.5.0"
   },
   "sha256": {
     "livekit-client-2.5.0.esm.mjs": "71ace94f4344579d3cb35aa09e0a5d4f3bc041e0c2dee132e9414d9123fd5bb7",
-    "livekit-client.LICENSE": "09e8a9bcec8067104652c168685ab0931e7868f9c8284b66f5ae6edae5f1130b",
-    "three/LICENSE": "bfe119ea4fd413f5f7ca3fcd63adb0c4a073ed39daa2fe7d3e6b769e21272601",
-    "three/build/three.core.js": "eb077d2417f61d3e6d9264c317cabc4ea35769ed6b0ab533067292a550784c20",
-    "three/build/three.module.js": "c8211c69345d2e9949dc7a8ac969380497aa0600a5a8ac6a459c8cd02dd9cb8a",
-    "three/examples/jsm/controls/OrbitControls.js": "b97879c748170baadeb3fb84cea1ffdf4674e283dc06042f34e2acb95a76042c",
-    "three/examples/jsm/curves/NURBSCurve.js": "bef2607618a7778455e71a1f0bd206951c382d313e2e245808cc7d3533d60fb6",
-    "three/examples/jsm/curves/NURBSUtils.js": "c6bd7c4137d585098923f189687898ea3e8762ea3ecbe255d749a56353894379",
-    "three/examples/jsm/environments/RoomEnvironment.js": "c20f0b4677f6128a138d7152b85cbef9091f4f45cdfa05adca04d40c1697c7ae",
-    "three/examples/jsm/libs/draco/draco_decoder.js": "30e4d486fa020737af10e3c56197693e5b904bdc05b8bfa5d7b06751dec6da04",
-    "three/examples/jsm/libs/draco/draco_decoder.wasm": "c55a594e8ffd18426d36b27fea9618af3df5e173640a3e56d46f09d76f0574f2",
-    "three/examples/jsm/libs/draco/draco_wasm_wrapper.js": "e8049906ef3f8f75d3456c22a3f31bfdfe5b5b5bd09ccdec613b9e9a49d554d8",
-    "three/examples/jsm/libs/fflate.module.js": "209a4412eb48ce609edb4391992a792ffcc3983d30ee7e2b0b89a8c470f3cd8a",
-    "three/examples/jsm/libs/meshopt_decoder.module.js": "784315b6959c85459eab77f51776158cc381d7e7d77b919ff7c4935f088a7c5c",
-    "three/examples/jsm/libs/stats.module.js": "2c71a2f70e89c69e46c2e285fb171bac3dcfd498a85400e94ad5aaf6044ffc06",
-    "three/examples/jsm/loaders/DRACOLoader.js": "7a4a51c694a6c9f983be452cc82b365e69ce08424654e3f245b4115e6efef258",
-    "three/examples/jsm/loaders/FBXLoader.js": "d97724a6bea228003e02c64651d969a9a62003a00be314ef6995c390116f547d",
-    "three/examples/jsm/loaders/GLTFLoader.js": "67ac5551fdafa6e349bd80c8f8e5e39c136d6b2fb1ad647db9abb21dc86f9e4a",
-    "three/examples/jsm/utils/BufferGeometryUtils.js": "fda7e946b8e0b5ab39b779206589e7a1079a22eb24efb89d7223e03fdfb1f751"
+    "livekit-client.LICENSE": "09e8a9bcec8067104652c168685ab0931e7868f9c8284b66f5ae6edae5f1130b"
   }
 }

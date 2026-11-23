@@ -44,19 +44,30 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             response = await self.client.get(path)
             self.assertEqual(response.status, 200)
             self.assertEqual(response.headers["Cache-Control"], "no-store")
-            self.assertIn('id="connect"', await response.text())
+            body = await response.text()
+            self.assertIn('id="connect"', body)
+            self.assertIn('class="control-panel" open', body)
+            self.assertNotIn('id="rec-btn"', body)
+            self.assertNotIn('id="status"', body)
+            self.assertNotIn('Диагностика', body)
 
     async def test_browser_modules_are_served_as_javascript(self):
         for path in (
             "/vendor/livekit-client-2.5.0.esm.mjs",
-            "/vendor/three/build/three.module.js",
-            "/vendor/three/build/three.core.js",
-            "/vendor/three/examples/jsm/loaders/GLTFLoader.js",
+            "/assistant.mjs",
+            "/owl.mjs",
         ):
             response = await self.client.get(path)
             self.assertEqual(response.status, 200, path)
             self.assertIn("javascript", response.headers["Content-Type"], path)
             self.assertNotIn("<html", (await response.text())[:200].lower(), path)
+
+    async def test_avatar_poses_are_available_as_webp(self):
+        for pose in ("neutral", "thinking"):
+            response = await self.client.get(f"/avatars/owl-{pose}.webp")
+            self.assertEqual(response.status, 200, pose)
+            self.assertEqual(response.content_type, "image/webp", pose)
+            self.assertEqual((await response.read())[8:12], b"WEBP", pose)
 
     async def test_versioned_token_requires_bearer_authentication(self):
         response = await self.client.get("/v1/token?room=test")

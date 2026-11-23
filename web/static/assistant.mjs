@@ -1,45 +1,35 @@
+import { mountOwl } from './owl.mjs';
+
 const $ = (selector) => document.querySelector(selector);
 const connect = $('#connect');
 const mic = $('#mic-toggle');
 const mute = $('#mute-btn');
-const rec = $('#rec-btn');
-const download = $('#export-btn');
 const answer = $('#answer-text');
-const agentState = $('#agent-state');
-const logPanel = $('#log');
-const status = $('#status');
-const diagnostics = $('.session-status');
+const feedback = $('#control-error');
+const owlActivity = $('#owl-activity');
+const setOwlState = mountOwl($('#avatar'), voiceLevel);
 const decoder = new TextDecoder();
-const entries = [];
 const audioTracks = new Map();
-const labels = {listening:'Слушаю', thinking:'Готовлю ответ…', speaking:'Говорю'};
+const labels = {idle:'', listening:'Слушаю', thinking:'Готовлю ответ…', speaking:'Говорю'};
+const instruction = answer.textContent;
 let sdk;
 let room;
 let micTrack;
 let muted = false;
-let recording = false;
+let agentState = 'idle';
 let audioContext;
 let peak = 0;
 
-function log(message) {
-  const line = document.createElement('div');
-  line.textContent = `[${new Date().toLocaleTimeString('ru-RU')}] ${message}`;
-  logPanel.append(line);
-  if (logPanel.children.length > 60) logPanel.firstChild.remove();
-  logPanel.scrollTop = logPanel.scrollHeight;
+function showError(message = '') {
+  feedback.textContent = message;
+  feedback.hidden = !message;
 }
 
-function setStatus(text, kind) {
-  status.textContent = text;
-  diagnostics.classList.toggle('active', kind === 'active');
-  diagnostics.classList.toggle('error', kind === 'error');
-  log(text);
-}
-
-function record(role, text) {
-  if (!recording || !text) return;
-  entries.push({time:new Date(), role, text});
-  download.hidden = false;
+function syncOwl() {
+  const microphoneOff = !micTrack || micTrack.isMuted;
+  const state = agentState === 'listening' && microphoneOff ? 'idle' : agentState;
+  setOwlState(state);
+  owlActivity.textContent = labels[state];
 }
 
 function setAnswer(text, placeholder = false) {
@@ -50,14 +40,11 @@ function setAnswer(text, placeholder = false) {
 function handleData(payload) {
   let event;
   try { event = JSON.parse(decoder.decode(payload)); } catch { return; }
-  if (event.type === 'agent_state') {
-    agentState.textContent = labels[event.state] ?? '';
-    agentState.hidden = !agentState.textContent;
+  if (event.type === 'agent_state' && Object.hasOwn(labels, event.state)) {
+    agentState = event.state;
+    syncOwl();
   } else if (event.type === 'agent_speech' && typeof event.text === 'string') {
     setAnswer(event.text);
-    record('Пятерка', event.text);
-  } else if (event.type === 'user_speech' && typeof event.text === 'string') {
-    record('Пользователь', event.text);
   }
 }
 
@@ -95,7 +82,9 @@ function attachTrack(track) {
   element.muted = muted;
   element.autoplay = true;
   document.body.append(element);
-  element.play().catch(() => log('Для включения звука нажмите «Звук».'));
+  element.play().catch(() => {
+    if (audioTracks.has(track)) showError('Чтобы включить озвучивание, нажмите «Звук».');
+  });
   const playback = {element};
   audioTracks.set(track, playback);
   if (audioContext) {
@@ -105,8 +94,9 @@ function attachTrack(track) {
       playback.analyser.fftSize = 1024;
       playback.samples = new Float32Array(playback.analyser.fftSize);
       playback.source.connect(playback.analyser);
-    } catch (error) {
-      log('Анализ звука недоступен: ' + error.message);
+    } catch {
+      // LiveKit exposes an audio level when the browser cannot create an analyser.
+      playback.analyser = null;
     }
   }
 }
@@ -119,6 +109,7 @@ function syncControls() {
   mute.textContent = muted ? 'Включить звук' : 'Звук';
   mic.setAttribute('aria-pressed', String(Boolean(micTrack && !micTrack.isMuted)));
   mute.setAttribute('aria-pressed', String(Boolean(room && !muted)));
+  syncOwl();
 }
 
 function clearRoom(activeRoom) {
@@ -128,7 +119,8 @@ function clearRoom(activeRoom) {
   micTrack = null;
   room = null;
   muted = false;
-  agentState.hidden = true;
+  agentState = 'idle';
+  if (answer.classList.contains('placeholder')) setAnswer(instruction, true);
   syncControls();
 }
 
@@ -153,12 +145,12 @@ async function token() {
 
 connect.onclick = async () => {
   connect.disabled = true;
+  showError();
   let activeRoom = room;
   try {
     if (activeRoom) {
       await activeRoom.disconnect();
       clearRoom(activeRoom);
-      setStatus('Готов к подключению');
       return;
     }
     if (!isSecureContext || !navigator.mediaDevices?.getUserMedia) {
@@ -169,8 +161,6 @@ connect.onclick = async () => {
       try { audioContext = new Context(); } catch {}
     }
     audioContext?.resume().catch(() => {});
-    setStatus('Подключение…');
-    setAnswer('Подключение к Пятерке…', true);
     sdk ??= await import('./vendor/livekit-client-2.5.0.esm.mjs');
     const credentials = await token();
     activeRoom = new sdk.Room();
@@ -187,7 +177,6 @@ connect.onclick = async () => {
     activeRoom.on(sdk.RoomEvent.Disconnected, () => {
       if (room !== activeRoom) return;
       clearRoom(activeRoom);
-      setStatus('Готов к подключению');
     });
     await activeRoom.connect(credentials.url, credentials.token, {websocketTimeout:10000, peerConnectionTimeout:15000, maxRetries:1, rtcConfig:{iceServers:[]}});
     activeRoom.startAudio().catch(() => {});
@@ -201,13 +190,11 @@ connect.onclick = async () => {
     if (room !== activeRoom) throw new Error('Голосовое соединение прервалось.');
     if (answer.classList.contains('placeholder')) setAnswer('Задайте Пятерке вопрос голосом.', true);
     syncControls();
-    setStatus('Соединение активно', 'active');
   } catch (error) {
     clearRoom(activeRoom);
     if (activeRoom) await activeRoom.disconnect().catch(() => {});
     const message = error.name === 'NotAllowedError' ? 'Разрешите доступ к микрофону в браузере.' : error.message;
-    setStatus(message, 'error');
-    if (answer.classList.contains('placeholder')) setAnswer('Подключитесь и задайте Пятерке вопрос голосом.', true);
+    showError(message);
   } finally {
     connect.disabled = false;
   }
@@ -215,19 +202,25 @@ connect.onclick = async () => {
 
 mic.onclick = async () => {
   if (!micTrack) return;
+  showError();
   try {
     if (micTrack.isMuted) await micTrack.unmute();
     else await micTrack.mute();
     syncControls();
-  } catch (error) { log(error.message); }
+  } catch {
+    showError('Не удалось переключить микрофон.');
+  }
 };
 
 mute.onclick = async () => {
   if (!room) return;
+  showError();
   if (!room.canPlaybackAudio) {
     await room.startAudio().catch(() => {});
     audioContext?.resume().catch(() => {});
-    for (const {element} of audioTracks.values()) element.play().catch(() => {});
+    for (const {element} of audioTracks.values()) {
+      element.play().catch(() => showError('Не удалось включить звук в браузере.'));
+    }
     return;
   }
   muted = !muted;
@@ -235,20 +228,3 @@ mute.onclick = async () => {
   syncControls();
 };
 
-rec.onclick = () => {
-  recording = !recording;
-  rec.setAttribute('aria-pressed', String(recording));
-  rec.textContent = recording ? 'Остановить запись' : 'Запись';
-};
-download.onclick = () => {
-  const text = ['# Диалог с Пятеркой · кафедра ИУ5', '', ...entries.map(({time, role, text}) =>
-    `**[${time.toLocaleTimeString('ru-RU')}] ${role}**\n\n${text}\n`)].join('\n');
-  const uri = URL.createObjectURL(new Blob([text], {type:'text/markdown;charset=utf-8'}));
-  const link = Object.assign(document.createElement('a'), {href:uri, download:'iu5-dialog.md'});
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(uri), 500);
-};
-
-import('./owl.mjs')
-  .then(({mountOwl}) => mountOwl($('#avatar'), voiceLevel))
-  .catch((error) => log('3D-аватар недоступен: ' + error.message));

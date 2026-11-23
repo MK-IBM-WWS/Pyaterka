@@ -6,9 +6,6 @@
   <meta name="description" content="Пятерка — голосовой помощник кафедры ИУ5 МГТУ имени Баумана">
   <link rel="icon" type="image/jpeg" href="/img/logo-iu5.jpg">
   <link rel="stylesheet" href="/assistant.css">
-  <script type="importmap">
-    {"imports":{"three":"/vendor/three/build/three.module.js"}}
-  </script>
   <script type="module" src="/assistant.mjs"></script>
   <title>Пятерка · ИУ5</title>
 </head>
@@ -17,30 +14,41 @@
     <img src="/img/logo-iu5.jpg" alt="ИУ5" width="46" height="46">
   </header>
   <main>
-    <div class="heading">
-      <h1>Пятерка — помощник кафедры ИУ5</h1>
-      <div class="session-status"><span class="status-dot" aria-hidden="true"></span><span id="status" role="status">Готов к подключению</span></div>
-    </div>
+    <h1>Пятерка — помощник кафедры ИУ5</h1>
     <div class="workspace">
       <section class="answer" aria-labelledby="answer-heading">
         <h2 id="answer-heading">Ответ Пятерки</h2>
         <p id="answer-text" class="placeholder" aria-live="polite">Подключитесь и задайте Пятерке вопрос голосом.</p>
-        <p id="agent-state" hidden></p>
+        <p id="control-error" role="alert" hidden></p>
+        <span id="owl-activity" class="sr-only" role="status"></span>
       </section>
-      <div class="stage" id="avatar">
+      <div class="stage" id="avatar" data-state="idle" role="img" aria-label="Пятерка, полярная сова">
         <div class="rings" aria-hidden="true"></div>
-        <img class="owl-fallback" src="/avatars/snowy-owl.png" alt="" width="640" height="640">
-        <span class="sr-only">Пятерка, полярная сова</span>
+        <div class="owl-art" aria-hidden="true">
+          <div class="owl-shadow"></div>
+          <div class="owl-neutral">
+            <img class="owl-layer owl-body" src="/avatars/owl-neutral.webp" alt="" width="960" height="960">
+            <div class="owl-head">
+              <img class="owl-layer owl-face" src="/avatars/owl-neutral.webp" alt="" width="960" height="960">
+              <span class="owl-beak"></span>
+            </div>
+          </div>
+          <div class="owl-thinking">
+            <img class="owl-layer owl-temple" src="/avatars/owl-neutral.webp" alt="" width="960" height="960">
+            <img class="owl-layer owl-thought-body" src="/avatars/owl-thinking.webp" alt="" width="960" height="960">
+            <img class="owl-layer owl-wing" src="/avatars/owl-thinking.webp" alt="" width="960" height="960">
+          </div>
+        </div>
       </div>
     </div>
-    <div id="controls">
-      <button id="connect" type="button" class="primary">Подключиться</button>
-      <button id="mic-toggle" type="button" aria-pressed="false" disabled>Микрофон</button>
-      <button id="mute-btn" type="button" aria-pressed="false" disabled>Звук</button>
-      <button id="rec-btn" type="button" aria-pressed="false">Запись</button>
-      <button id="export-btn" type="button" hidden>Скачать .md</button>
-      <details class="diagnostics"><summary>Диагностика</summary><div id="log"></div></details>
-    </div>
+    <details class="control-panel" open>
+      <summary><span class="show-controls">Показать кнопки</span><span class="hide-controls">Скрыть кнопки</span></summary>
+      <div id="controls">
+        <button id="connect" type="button" class="primary">Подключиться</button>
+        <button id="mic-toggle" type="button" aria-pressed="false" disabled>Микрофон</button>
+        <button id="mute-btn" type="button" aria-pressed="false" disabled>Звук</button>
+      </div>
+    </details>
   </main>
 </body>
 </html>

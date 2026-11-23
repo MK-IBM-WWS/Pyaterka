@@ -231,6 +231,13 @@ async def index(request):
     return web.FileResponse(STATIC_DIR / "index.html", headers={"Cache-Control": "no-store"})
 
 
+async def owl_pose(request):
+    return web.FileResponse(
+        STATIC_DIR / "avatars" / f"owl-{request.match_info['pose']}.webp",
+        headers={"Content-Type": "image/webp"},
+    )
+
+
 def admin_authorized(request):
     scheme, _, encoded = request.headers.get("Authorization", "").partition(" ")
     if scheme.lower() != "basic" or not ADMIN_PASSWORD:
@@ -306,6 +313,7 @@ def create_app():
     app.router.add_delete(r"/admin/api/documents/{id:[0-9]+}", admin_api)
     app.router.add_get("/", index)
     app.router.add_get("/index.html", index)
+    app.router.add_get(r"/avatars/owl-{pose:neutral|thinking}.webp", owl_pose)
     app.router.add_static("/", STATIC_DIR)
     return app
 
