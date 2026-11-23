@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>База знаний ИУ5</title>
+  <link rel="stylesheet" href="/admin.css">
+  <script type="module" src="/admin.mjs"></script>
+</head>
+<body>
+  <header><a href="/" aria-label="Вернуться к Пятерке"><img src="/img/logo-iu5.jpg" alt="ИУ5"></a></header>
+  <main>
+    <h1>База знаний ИУ5</h1>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <div class="layout">
+      <section class="card" aria-labelledby="entries-title">
+        <div class="row heading"><h2 id="entries-title">Записи</h2><button id="new" type="button">Новая запись</button></div>
+        <label>Поиск по базе<input id="filter" type="search" placeholder="Название, категория или текст"></label>
+        <ul id="entries"></ul>
+        <div class="row tools">
+          <label class="file">Импорт JSON<input id="import" type="file" accept=".json,application/json"></label>
+          <button id="export" type="button">Экспорт JSON</button>
+        </div>
+        <p class="hint">При импорте записи с совпадающими заголовком и категорией обновляются.</p>
+      </section>
+      <section class="card" aria-labelledby="editor-title">
+        <h2 id="editor-title">Новая запись</h2>
+        <form id="entry-form">
+          <label>Заголовок<input name="title" required maxlength="180"></label>
+          <label>Категория
+            <select name="category">
+              <option value="teacher">Преподаватель</option><option value="schedule">Расписание</option>
+              <option value="announcement">Объявление</option><option value="other" selected>Другое</option>
+            </select>
+          </label>
+          <label>Текст<textarea name="content" rows="9" required maxlength="24000"></textarea></label>
+          <label class="file text-upload">Загрузить текст из TXT или MD<input id="text-file" type="file" accept=".txt,.md,text/plain,text/markdown"></label>
+          <label>Источник (необязательно)<input name="source" maxlength="500"></label>
+          <div class="dates">
+            <label>Действует с<input name="valid_from" type="date"></label>
+            <label>Действует по<input name="valid_until" type="date"></label>
+          </div>
+          <div class="row tools">
+            <button type="submit" class="primary">Сохранить</button>
+            <button id="delete" type="button" class="danger" hidden>Удалить</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

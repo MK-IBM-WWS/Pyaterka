@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Пятерка — голосовой помощник кафедры ИУ5 МГТУ имени Баумана">
+  <link rel="icon" type="image/jpeg" href="/img/logo-iu5.jpg">
+  <link rel="stylesheet" href="/assistant.css">
+  <script type="importmap">
+    {"imports":{"three":"/vendor/three/build/three.module.js"}}
+  </script>
+  <script type="module" src="/assistant.mjs"></script>
+  <title>Пятерка · ИУ5</title>
+</head>
+<body>
+  <header class="topbar">
+    <img src="/img/logo-iu5.jpg" alt="ИУ5" width="46" height="46">
+  </header>
+  <main>
+    <div class="heading">
+      <h1>Пятерка — помощник кафедры ИУ5</h1>
+      <div class="session-status"><span class="status-dot" aria-hidden="true"></span><span id="status" role="status">Готов к подключению</span></div>
+    </div>
+    <div class="workspace">
+      <section class="answer" aria-labelledby="answer-heading">
+        <h2 id="answer-heading">Ответ Пятерки</h2>
+        <p id="answer-text" class="placeholder" aria-live="polite">Подключитесь и задайте Пятерке вопрос голосом.</p>
+        <p id="agent-state" hidden></p>
+      </section>
+      <div class="stage" id="avatar">
+        <div class="rings" aria-hidden="true"></div>
+        <img class="owl-fallback" src="/avatars/snowy-owl.png" alt="" width="640" height="640">
+        <span class="sr-only">Пятерка, полярная сова</span>
+      </div>
+    </div>
+    <div id="controls">
+      <button id="connect" type="button" class="primary">Подключиться</button>
+      <button id="mic-toggle" type="button" aria-pressed="false" disabled>Микрофон</button>
+      <button id="mute-btn" type="button" aria-pressed="false" disabled>Звук</button>
+      <button id="rec-btn" type="button" aria-pressed="false">Запись</button>
+      <button id="export-btn" type="button" hidden>Скачать .md</button>
+      <details class="diagnostics"><summary>Диагностика</summary><div id="log"></div></details>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,37 @@
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#09162b;color:#eef4ff;--border:#385171;--muted:#aebfd7}
+*{box-sizing:border-box}
+body{margin:0}
+header{padding:16px max(20px,calc((100% - 1180px)/2));border-bottom:1px solid #213a59;background:#0b1a31}
+header img{width:46px;height:46px;object-fit:contain;border-radius:8px;display:block}
+main{max-width:1220px;margin:auto;padding:24px 20px 40px}
+h1{font-size:clamp(1.7rem,4vw,2.4rem);margin:4px 0 12px}
+h2{font-size:1.18rem;margin:0 0 18px}
+.layout{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:18px;align-items:start}
+.card{background:#10223d;border:1px solid #243d5d;border-radius:16px;padding:20px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.heading{justify-content:space-between;margin-bottom:14px}
+.heading h2{margin:0}
+.tools{margin-top:14px}
+label{display:grid;gap:6px;color:#d6e4f6;font-size:.9rem}
+form{display:grid;gap:13px}
+input,select,textarea,button,.file{font:inherit;color:inherit;background:#0b1a31;border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+input,select,textarea{width:100%}
+textarea{resize:vertical;min-height:110px}
+button,.file{cursor:pointer}
+button:hover,.file:hover,button[aria-current=true]{background:#1e395f}
+button:disabled,input:disabled{opacity:.55;cursor:wait}
+:focus-visible,.file:focus-within{outline:2px solid #aacfff;outline-offset:2px}
+.file{position:relative;display:inline-flex}
+.file input{position:absolute;inset:0;opacity:0;padding:0;cursor:pointer}
+.text-upload{justify-self:start}
+.primary{background:#c4ddff;color:#09162b;border-color:#c4ddff;font-weight:650}
+.primary:hover{background:#9ec9ff}
+.danger{color:#ffb7b7}
+.dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#notice{min-height:1.5em;margin:0 0 12px;color:#a5ead4}
+#notice[data-error]{color:#ffbdba}
+#entries{padding:0;margin:12px 0 0;list-style:none;display:grid;gap:6px;max-height:55vh;overflow:auto}
+#entries button{width:100%;text-align:left;overflow-wrap:anywhere}
+#entries small{display:block;color:var(--muted);margin-top:4px}
+.hint,.empty{color:var(--muted);font-size:.86rem}
+@media(max-width:740px){.layout{grid-template-columns:1fr}#entries{max-height:36vh}}

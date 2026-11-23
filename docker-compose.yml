@@ -1,0 +1,159 @@
+services:
+  livekit-server:
+    image: livekit/livekit-server:v1.13.9
+    command: ["--config", "/etc/livekit.yaml"]
+    network_mode: host
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:?run install.sh}: ${LIVEKIT_API_SECRET:?run install.sh}"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--bind", "127.0.0.1", "--port", "16379"]
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "16379", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 8
+    restart: unless-stopped
+
+  llm:
+    networks: [models]
+    image: ${LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda12-b9765@sha256:ca97607b93e6b31e4f4b0b930695b415be0b5ba8b8d389d83f31aeb36500797e}
+    command:
+      - --model
+      - /models/${LLM_FILE:-Qwen3.6-27B-IQ4_XS.gguf}
+      - --alias
+      - iu5-qwen
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --ctx-size
+      - "${LLM_CONTEXT:-4096}"
+      - --parallel
+      - "1"
+      - --n-gpu-layers
+      - "99"
+      - --fit
+      - "off"
+      - --batch-size
+      - "256"
+      - --ubatch-size
+      - "128"
+      - --reasoning
+      - "off"
+    volumes:
+      - ./models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${LLM_GPU_DEVICE:-0}"]
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 120s
+      retries: 10
+    restart: unless-stopped
+
+  inference:
+    networks: [models]
+    build: ./inference
+    environment:
+      INFERENCE_TOKEN: "${INFERENCE_TOKEN:?run install.sh}"
+      TORCH_CPU_THREADS: "${TORCH_CPU_THREADS:-4}"
+      WHISPER_CPU_THREADS: "${WHISPER_CPU_THREADS:-8}"
+      TTS_SPEAKER: "${TTS_SPEAKER:-baya}"
+      RAG_MIN_SIMILARITY: "${RAG_MIN_SIMILARITY:-0.52}"
+    volumes:
+      - ./models:/models:ro
+      - rag-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8650/healthz', timeout=2)"]
+      interval: 8s
+      timeout: 4s
+      start_period: 90s
+      retries: 8
+    restart: unless-stopped
+
+  agent:
+    networks: [default, models]
+    build: ./agent
+    environment:
+      LIVEKIT_URL: ws://host.docker.internal:7880
+      LIVEKIT_API_KEY: "${LIVEKIT_API_KEY}"
+      LIVEKIT_API_SECRET: "${LIVEKIT_API_SECRET}"
+      INFERENCE_TOKEN: "${INFERENCE_TOKEN}"
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    depends_on:
+      livekit-server:
+        condition: service_started
+      llm:
+        condition: service_healthy
+      inference:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    networks: [default, models]
+    build: ./web
+    environment:
+      LIVEKIT_URL: ws://host.docker.internal:7880
+      LIVEKIT_HEALTH_ADDR: host.docker.internal:7880
+      LIVEKIT_PUBLIC_URL: "wss://${SERVER_NAME:?run install.sh}"
+      LIVEKIT_API_KEY: "${LIVEKIT_API_KEY}"
+      LIVEKIT_API_SECRET: "${LIVEKIT_API_SECRET}"
+      CLIENT_API_KEY: "${CLIENT_API_KEY:?run install.sh}"
+      INFERENCE_TOKEN: "${INFERENCE_TOKEN}"
+      RAG_ADMIN_USER: "${RAG_ADMIN_USER:-rag-admin}"
+      RAG_ADMIN_PASSWORD: "${RAG_ADMIN_PASSWORD:?run install.sh}"
+      PUBLIC_ORIGIN: "https://${SERVER_NAME}"
+      MAX_SESSIONS: "${MAX_SESSIONS:-3}"
+      TOKEN_TTL: "${TOKEN_TTL:-10m}"
+      TOKEN_RATE_LIMIT: "${TOKEN_RATE_LIMIT:-10}"
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1/ready', timeout=2)"]
+      interval: 4s
+      timeout: 4s
+      retries: 12
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:stable-alpine
+    ports: ["80:80", "443:443"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/.htpasswd:/etc/nginx/.htpasswd:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/etc:/etc/letsencrypt:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    profiles: ["tls"]
+    volumes:
+      - ./certbot/etc:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+
+volumes:
+  rag-data:
+
+networks:
+  models:
+    internal: true

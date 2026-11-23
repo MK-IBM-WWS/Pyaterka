@@ -1,0 +1,7 @@
+aiohttp>=3.11,<4
+faster-whisper==1.2.1
+sentence-transformers==5.2.2
+transformers==4.57.6
+sentencepiece>=0.2,<0.3
+snowballstemmer==3.0.1
+num2words>=0.5.14,<0.6
