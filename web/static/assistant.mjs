@@ -1,6 +1,8 @@
 import { mountOwl } from './owl.mjs';
 
 const $ = (selector) => document.querySelector(selector);
+const controlsToggle = $('#controls-toggle');
+const controls = $('#controls');
 const connect = $('#connect');
 const mic = $('#mic-toggle');
 const mute = $('#mute-btn');
@@ -19,6 +21,23 @@ let muted = false;
 let agentState = 'idle';
 let audioContext;
 let peak = 0;
+
+function setControlsOpen(open) {
+  const label = open ? 'Скрыть кнопки' : 'Показать кнопки';
+  controls.hidden = !open;
+  controlsToggle.setAttribute('aria-expanded', String(open));
+  controlsToggle.setAttribute('aria-label', label);
+  controlsToggle.title = label;
+}
+
+setControlsOpen(matchMedia('(min-width: 1300px)').matches);
+controlsToggle.onclick = () => setControlsOpen(controls.hidden);
+controls.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setControlsOpen(false);
+    controlsToggle.focus();
+  }
+});
 
 function showError(message = '') {
   feedback.textContent = message;
@@ -105,8 +124,8 @@ function syncControls() {
   connect.textContent = room ? 'Отключиться' : 'Подключиться';
   mic.disabled = !micTrack;
   mute.disabled = !room;
-  mic.textContent = micTrack?.isMuted ? 'Включить микрофон' : 'Микрофон';
-  mute.textContent = muted ? 'Включить звук' : 'Звук';
+  mic.title = micTrack?.isMuted ? 'Включить микрофон' : 'Выключить микрофон';
+  mute.title = muted ? 'Включить звук' : 'Выключить звук';
   mic.setAttribute('aria-pressed', String(Boolean(micTrack && !micTrack.isMuted)));
   mute.setAttribute('aria-pressed', String(Boolean(room && !muted)));
   syncOwl();

@@ -45,8 +45,11 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(response.status, 200)
             self.assertEqual(response.headers["Cache-Control"], "no-store")
             body = await response.text()
-            self.assertIn('id="connect"', body)
-            self.assertIn('class="control-panel" open', body)
+            header = body.split('<header class="topbar">', 1)[1].split("</header>", 1)[0]
+            self.assertLess(header.index('class="department-logo"'), header.index("<h1>"))
+            self.assertLess(header.index("<h1>"), header.index('id="controls-toggle"'))
+            self.assertIn('aria-controls="controls"', header)
+            self.assertIn('id="connect"', header)
             self.assertNotIn('id="rec-btn"', body)
             self.assertNotIn('id="status"', body)
             self.assertNotIn('Диагностика', body)
@@ -56,6 +59,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             "/vendor/livekit-client-2.5.0.esm.mjs",
             "/assistant.mjs",
             "/owl.mjs",
+            "/beak.mjs",
         ):
             response = await self.client.get(path)
             self.assertEqual(response.status, 200, path)
@@ -63,7 +67,7 @@ class WebTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("<html", (await response.text())[:200].lower(), path)
 
     async def test_avatar_poses_are_available_as_webp(self):
-        for pose in ("neutral", "thinking"):
+        for pose in ("neutral", "raise-low", "raise-mid", "raise-high", "thinking", "cap", "beak-half", "beak-open"):
             response = await self.client.get(f"/avatars/owl-{pose}.webp")
             self.assertEqual(response.status, 200, pose)
             self.assertEqual(response.content_type, "image/webp", pose)

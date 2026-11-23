@@ -313,7 +313,10 @@ def create_app():
     app.router.add_delete(r"/admin/api/documents/{id:[0-9]+}", admin_api)
     app.router.add_get("/", index)
     app.router.add_get("/index.html", index)
-    app.router.add_get(r"/avatars/owl-{pose:neutral|thinking}.webp", owl_pose)
+    app.router.add_get(
+        r"/avatars/owl-{pose:neutral|raise-(?:low|mid|high)|thinking|cap|beak-(?:half|open)}.webp",
+        owl_pose,
+    )
     app.router.add_static("/", STATIC_DIR)
     return app
 

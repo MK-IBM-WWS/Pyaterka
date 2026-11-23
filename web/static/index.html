@@ -11,10 +11,22 @@
 </head>
 <body>
   <header class="topbar">
-    <img src="/img/logo-iu5.jpg" alt="ИУ5" width="46" height="46">
+    <img class="department-logo" src="/img/logo-iu5.jpg" alt="ИУ5" width="46" height="46">
+    <h1>Пятерка — помощник кафедры ИУ5</h1>
+    <div class="control-panel" role="group" aria-label="Управление разговором">
+      <button id="controls-toggle" type="button" aria-controls="controls" aria-expanded="false"
+              aria-label="Показать кнопки" title="Показать кнопки">
+        <span class="control-icon" aria-hidden="true"></span>
+        <span class="control-toggle-label" aria-hidden="true">Кнопки</span>
+      </button>
+      <div id="controls" hidden>
+        <button id="connect" type="button" class="primary">Подключиться</button>
+        <button id="mic-toggle" type="button" aria-pressed="false" disabled>Микрофон</button>
+        <button id="mute-btn" type="button" aria-pressed="false" disabled>Звук</button>
+      </div>
+    </div>
   </header>
   <main>
-    <h1>Пятерка — помощник кафедры ИУ5</h1>
     <div class="workspace">
       <section class="answer" aria-labelledby="answer-heading">
         <h2 id="answer-heading">Ответ Пятерки</h2>
@@ -22,7 +34,7 @@
         <p id="control-error" role="alert" hidden></p>
         <span id="owl-activity" class="sr-only" role="status"></span>
       </section>
-      <div class="stage" id="avatar" data-state="idle" role="img" aria-label="Пятерка, полярная сова">
+      <div class="stage" id="avatar" data-state="idle" role="img" aria-label="Пятерка, полярная сова в шапочке выпускника">
         <div class="rings" aria-hidden="true"></div>
         <div class="owl-art" aria-hidden="true">
           <div class="owl-shadow"></div>
@@ -30,25 +42,23 @@
             <img class="owl-layer owl-body" src="/avatars/owl-neutral.webp" alt="" width="960" height="960">
             <div class="owl-head">
               <img class="owl-layer owl-face" src="/avatars/owl-neutral.webp" alt="" width="960" height="960">
-              <span class="owl-beak"></span>
+              <img class="owl-cap" src="/avatars/owl-cap.webp" alt="" width="500" height="237">
             </div>
           </div>
-          <div class="owl-thinking">
-            <img class="owl-layer owl-temple" src="/avatars/owl-neutral.webp" alt="" width="960" height="960">
-            <img class="owl-layer owl-thought-body" src="/avatars/owl-thinking.webp" alt="" width="960" height="960">
-            <img class="owl-layer owl-wing" src="/avatars/owl-thinking.webp" alt="" width="960" height="960">
+          <div class="owl-poses">
+            <div class="owl-blend">
+              <img class="owl-layer" src="/avatars/owl-neutral.webp" alt="" width="960" height="960">
+              <img class="owl-layer" src="/avatars/owl-raise-low.webp" alt="" width="960" height="960">
+              <img class="owl-layer" src="/avatars/owl-raise-mid.webp" alt="" width="960" height="960">
+              <img class="owl-layer" src="/avatars/owl-raise-high.webp" alt="" width="960" height="960">
+              <img class="owl-layer" src="/avatars/owl-thinking.webp" alt="" width="960" height="960">
+            </div>
+            <img class="owl-cap" src="/avatars/owl-cap.webp" alt="" width="500" height="237">
           </div>
+          <canvas class="owl-beak" width="144" height="144" hidden></canvas>
         </div>
       </div>
     </div>
-    <details class="control-panel" open>
-      <summary><span class="show-controls">Показать кнопки</span><span class="hide-controls">Скрыть кнопки</span></summary>
-      <div id="controls">
-        <button id="connect" type="button" class="primary">Подключиться</button>
-        <button id="mic-toggle" type="button" aria-pressed="false" disabled>Микрофон</button>
-        <button id="mute-btn" type="button" aria-pressed="false" disabled>Звук</button>
-      </div>
-    </details>
   </main>
 </body>
 </html>
