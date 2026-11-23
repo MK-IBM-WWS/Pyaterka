@@ -1,15 +1,24 @@
 services:
   livekit-server:
-    image: livekit/livekit-server:v1.13.9
+    build: ./livekit
     command: ["--config", "/etc/livekit.yaml"]
     network_mode: host
+    init: true
     environment:
       LIVEKIT_KEYS: "${LIVEKIT_API_KEY:?run install.sh}: ${LIVEKIT_API_SECRET:?run install.sh}"
+      SERVER_NAME: "${SERVER_NAME:?run install.sh}"
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml:ro
     depends_on:
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 7880), 2).close()"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+    stop_grace_period: 20s
     restart: unless-stopped
 
   redis:
@@ -97,7 +106,7 @@ services:
     extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       livekit-server:
-        condition: service_started
+        condition: service_healthy
       llm:
         condition: service_healthy
       inference:

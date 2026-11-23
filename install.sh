@@ -44,19 +44,32 @@ compose=("${docker_cmd[@]}" compose)
 "${compose[@]}" version
 
 # Read only the named key; .env is Compose data, never a shell script.
-config() { sed -n "s/^${1}=//p" .env | tail -n 1; }
+config() {
+    if [[ -f .env ]]; then sed -n "s/^${1}=//p" .env | tail -n 1; fi
+}
+previous_name="$(config SERVER_NAME)"
+server="${1:-$previous_name}"
+if [[ -z "$server" || ( $# == 0 && "$server" =~ ^[0-9.]+$ ) ]]; then
+    read -r -p "DNS-имя сервера: " server || fail "Укажите DNS-имя: bash install.sh pyaterka.example.org"
+fi
+server="${server%.}"
+server="${server,,}"
+python3 - "$server" <<'PY'
+import re
+import sys
+
+name = sys.argv[1]
+label = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
+if len(name) > 253 or not re.fullmatch(rf"{label}(?:\.{label})*", name) or re.fullmatch(r"[0-9.]+", name):
+    raise SystemExit("Укажите DNS-имя сервера, например pyaterka.example.org.")
+PY
+getent -s dns ahostsv4 "$server" >/dev/null ||
+    fail "DNS-имя $server не разрешается в IPv4 на сервере. Проверьте DNS-запись и повторите установку."
+export SERVER_NAME="$server"
+
 if [[ ! -f .env ]]; then
-    detected="$(hostname -I | awk '{print $1}')"
-    server="${1:-}"
-    if [[ -z "$server" ]]; then
-        read -r -p "IPv4 или домен сервера [${detected}]: " server
-    fi
-    server="${server:-$detected}"
-    rtc_ip="${RTC_NODE_IP:-$detected}"
-    [[ -n "$server" && -n "$rtc_ip" ]] || fail "Укажите адрес сайта и RTC_NODE_IP."
     cat > .env <<CFG
-SERVER_NAME=${server,,}
-RTC_NODE_IP=${rtc_ip}
+SERVER_NAME=${server}
 LIVEKIT_API_KEY=$(openssl rand -hex 16)
 LIVEKIT_API_SECRET=$(openssl rand -hex 32)
 CLIENT_API_KEY=$(openssl rand -hex 24)
@@ -70,29 +83,12 @@ MAX_SESSIONS=3
 LLM_FILE=Qwen3.6-27B-IQ4_XS.gguf
 LLM_CONTEXT=4096
 CFG
+elif [[ "$server" != "$previous_name" ]] || grep -q '^RTC_NODE_IP=' .env; then
+    env_tmp="$(mktemp .env.XXXXXX)"
+    awk '!/^(SERVER_NAME|RTC_NODE_IP)=/' .env > "$env_tmp"
+    printf 'SERVER_NAME=%s\n' "$server" >> "$env_tmp"
+    mv "$env_tmp" .env
 fi
-
-server="$(config SERVER_NAME)"
-[[ -n "$server" ]] || fail "Отсутствует SERVER_NAME. Для обновления распакуйте архив в новый каталог."
-rtc_ip="$(config RTC_NODE_IP)"
-python3 - "$server" "$rtc_ip" <<'PY'
-import ipaddress
-import re
-import sys
-name, ip = sys.argv[1:]
-try:
-    ipaddress.IPv4Address(ip)
-except ValueError:
-    raise SystemExit("RTC_NODE_IP должен быть IPv4-адресом.")
-label = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
-if not re.fullmatch(rf"{label}(?:\.{label})*", name):
-    raise SystemExit("SERVER_NAME должен быть IPv4-адресом или DNS-именем.")
-if re.fullmatch(r"[0-9.]+", name):
-    try:
-        ipaddress.IPv4Address(name)
-    except ValueError:
-        raise SystemExit("Укажите корректный IPv4-адрес.")
-PY
 chmod 600 .env
 mkdir -p nginx/conf.d nginx/ssl certbot/{www,etc}
 chmod 755 nginx/conf.d nginx/ssl certbot/www certbot/etc
@@ -106,23 +102,28 @@ web_hash="$(printf '%s\n' "$(config WEB_PASSWORD)" | openssl passwd -apr1 -stdin
 printf '%s:%s\n' "$(config WEB_USER)" "$web_hash" > nginx/.htpasswd
 chmod 644 nginx/.htpasswd
 
-cert=/etc/nginx/ssl/voice.crt
-key=/etc/nginx/ssl/voice.key
+tls_dir=nginx/ssl
 if [[ -n "${TLS_CERT_FILE:-}" || -n "${TLS_KEY_FILE:-}" ]]; then
     [[ -r "${TLS_CERT_FILE:-}" && -r "${TLS_KEY_FILE:-}" ]] || fail "Укажите читаемые TLS_CERT_FILE и TLS_KEY_FILE."
-    install -m 644 "$TLS_CERT_FILE" nginx/ssl/voice.crt
-    install -m 600 "$TLS_KEY_FILE" nginx/ssl/voice.key
+    openssl x509 -in "$TLS_CERT_FILE" -noout -checkhost "$server" ||
+        fail "Сертификат из TLS_CERT_FILE должен подходить для $server."
+    install -m 644 "$TLS_CERT_FILE" "$tls_dir/voice.crt"
+    install -m 600 "$TLS_KEY_FILE" "$tls_dir/voice.key"
+elif [[ ! -s "$tls_dir/voice.key" ]] ||
+    ! openssl x509 -in "$tls_dir/voice.crt" -noout -checkhost "$server" >/dev/null 2>&1; then
+    tls_dir="nginx/ssl/self-signed/$server"
+    mkdir -p "$tls_dir"
+    if [[ ! -s "$tls_dir/voice.crt" || ! -s "$tls_dir/voice.key" ]]; then
+        openssl req -x509 -newkey rsa:2048 -nodes -days 365 -keyout "$tls_dir/voice.key" \
+          -out "$tls_dir/voice.crt" -subj "/CN=$server" -addext "subjectAltName=DNS:$server"
+    fi
 fi
-if [[ ! -s nginx/ssl/voice.crt || ! -s nginx/ssl/voice.key ]]; then
-    san="DNS:$server"
-    if [[ "$server" =~ ^[0-9.]+$ ]]; then san="IP:$server"; fi
-    openssl req -x509 -newkey rsa:2048 -nodes -days 365 -keyout nginx/ssl/voice.key \
-      -out nginx/ssl/voice.crt -subj "/CN=$server" -addext "subjectAltName=$san"
-fi
+cert="/etc/$tls_dir/voice.crt"
+key="/etc/$tls_dir/voice.key"
 
 docker_host_ip="$("${docker_cmd[@]}" network inspect bridge --format '{{(index .IPAM.Config 0).Gateway}}')"
 [[ "$docker_host_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Не удалось определить IPv4 шлюза Docker."
-sed -e "s|__RTC_NODE_IP__|$rtc_ip|g" -e "s|__DOCKER_HOST_IP__|$docker_host_ip|g" livekit.yaml.template > livekit.yaml
+sed -e "s|__DOCKER_HOST_IP__|$docker_host_ip|g" livekit.yaml.template > livekit.yaml
 chmod 644 livekit.yaml
 render_nginx() {
     sed -e "s|__SERVER_NAME__|$server|g" -e "s|__CERT_PATH__|$cert|g" -e "s|__KEY_PATH__|$key|g" \
