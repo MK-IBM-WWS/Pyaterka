@@ -12,11 +12,27 @@ command -v nvidia-ctk >/dev/null || fail "Установите и настрой
 
 sudo_cmd=()
 if (( EUID != 0 )); then sudo_cmd=(sudo); fi
-if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
-    "${sudo_cmd[@]}" apt-get update
-    "${sudo_cmd[@]}" apt-get install -y docker.io docker-compose
+packages=()
+if ! command -v docker >/dev/null; then
+    packages+=(docker.io docker-compose)
+elif ! docker compose version >/dev/null 2>&1 &&
+    ! "${sudo_cmd[@]}" docker compose version >/dev/null 2>&1; then
+    packages+=(docker-compose)
 fi
-"${sudo_cmd[@]}" apt-get install -y ca-certificates curl openssl python3
+[[ -s /etc/ssl/certs/ca-certificates.crt ]] || packages+=(ca-certificates)
+openssl version >/dev/null 2>&1 || packages+=(openssl)
+python3 --version >/dev/null 2>&1 || packages+=(python3)
+if ! curl --version >/dev/null 2>&1 && ! wget --version >/dev/null 2>&1; then
+    packages+=(curl)
+fi
+
+if ((${#packages[@]} > 0)); then
+    printf 'Установка недостающих пакетов: %s\n' "${packages[*]}"
+    "${sudo_cmd[@]}" apt-get update ||
+        fail "Не удалось обновить индексы APT. См. раздел диагностики APT в README.md."
+    "${sudo_cmd[@]}" apt-get install -y --no-remove "${packages[@]}" ||
+        fail "APT не смог установить недостающие пакеты. См. раздел диагностики APT в README.md."
+fi
 docker_cmd=(docker)
 if ! docker info >/dev/null 2>&1; then
     docker_cmd=("${sudo_cmd[@]}" docker)

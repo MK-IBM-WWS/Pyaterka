@@ -15,7 +15,14 @@ download() {
         mv "$dest.part" "$dest"
         return
     fi
-    curl --fail --location --retry 4 --connect-timeout 20 --continue-at - --output "$dest.part" "$url"
+    if curl --version >/dev/null 2>&1; then
+        curl --fail --location --retry 4 --connect-timeout 20 --continue-at - --output "$dest.part" "$url"
+    elif wget --version >/dev/null 2>&1; then
+        wget --continue --tries=5 --timeout=20 --output-document="$dest.part" "$url"
+    else
+        printf 'Для загрузки моделей нужен рабочий curl или wget.\n' >&2
+        exit 1
+    fi
     if [[ -n "$checksum" ]] && ! printf '%s  %s\n' "$checksum" "$dest.part" | sha256sum --check --status; then
         rm -f "$dest.part"
         printf 'Контрольная сумма %s не совпала. Повторите загрузку.\n' "$dest" >&2
